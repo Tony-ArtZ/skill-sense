@@ -1,0 +1,117 @@
+{
+  "nouns": {
+    "Candidates": {
+      "table": "employees",
+      "primary_key": "id",
+      "attributes": ["name", "email", "department", "join_date", "role"],
+      "description": "Employee profiles with comprehensive information"
+    },
+    "Skills": {
+      "table": "skills",
+      "primary_key": "id",
+      "attributes": ["skill_name", "category", "normalized_name"],
+      "description": "Skills taxonomy with categories"
+    },
+    "EmployeeSkills": {
+      "table": "employee_skills",
+      "primary_key": "id",
+      "attributes": ["employee_id", "skill_id", "confidence", "source_type", "evidence", "is_implicit"],
+      "description": "Link between employees and their validated skills"
+    },
+    "Interviews": {
+      "table": "employee_documents",
+      "primary_key": "id",
+      "attributes": ["employee_id", "document_type", "content", "processed_at"],
+      "description": "Interview recordings and transcripts"
+    },
+    "Departments": {
+      "table": "departments",
+      "primary_key": "id",
+      "attributes": ["name", "description", "manager_id"],
+      "description": "Organizational departments"
+    }
+  },
+  "links": [
+    {
+      "from_object": "Candidates",
+      "to_object": "EmployeeSkills",
+      "join": "employees.id = employee_skills.employee_id",
+      "type": "one_to_many",
+      "description": "Candidates can have multiple skills"
+    },
+    {
+      "from_object": "Skills",
+      "to_object": "EmployeeSkills",
+      "join": "skills.id = employee_skills.skill_id",
+      "type": "one_to_many",
+      "description": "Skills can be associated with multiple employees"
+    },
+    {
+      "from_object": "Candidates",
+      "to_object": "Interviews",
+      "join": "employees.id = employee_documents.employee_id",
+      "type": "one_to_many",
+      "description": "Candidates can have multiple interview documents"
+    },
+    {
+      "from_object": "Departments",
+      "to_object": "Candidates",
+      "join": "departments.id = employees.department_id",
+      "type": "one_to_many",
+      "description": "Departments contain multiple employees"
+    }
+  ],
+  "metrics": {
+    "SkillConfidence": {
+      "logic": "AVG(employee_skills.confidence)",
+      "dimensions": ["skills.category", "employees.department"],
+      "description": "Average confidence score for skills by category and department"
+    },
+    "HiddenSkillsRate": {
+      "logic": "COUNT(CASE WHEN employee_skills.is_implicit = 1 THEN 1 END) / COUNT(*)",
+      "dimensions": ["employees.department"],
+      "description": "Rate of implicitly discovered skills by department"
+    },
+    "SkillConsistency": {
+      "logic": "CASE WHEN COUNT(DISTINCT source_type) > 1 THEN 1 ELSE 0 END",
+      "dimensions": ["employees.id", "skills.skill_name"],
+      "description": "Whether a skill is validated across multiple sources"
+    },
+    "VideoValidationBoost": {
+      "logic": "CASE WHEN employee_skills.source_type = 'video' THEN employee_skills.confidence * 1.2 ELSE employee_skills.confidence END",
+      "dimensions": ["employees.id", "skills.skill_name"],
+      "description": "Boosted confidence for video-validated skills"
+    }
+  },
+  "skill_categories": {
+    "technical": {
+      "examples": ["Python", "JavaScript", "Machine Learning", "Docker", "AWS", "React"],
+      "description": "Programming languages, frameworks, and technical tools"
+    },
+    "soft": {
+      "examples": ["Leadership", "Communication", "Teamwork", "Problem Solving", "Creativity"],
+      "description": "Interpersonal and communication skills"
+    },
+    "domain": {
+      "examples": ["Finance", "Healthcare", "E-commerce", "Analytics", "Marketing"],
+      "description": "Industry-specific knowledge and expertise"
+    },
+    "business": {
+      "examples": ["Project Management", "Strategic Planning", "Negotiation", "Budget Management"],
+      "description": "Business and management skills"
+    }
+  },
+  "confidence_thresholds": {
+    "high": 85,
+    "medium": 60,
+    "low": 30,
+    "validation_threshold": 2
+  },
+  "source_reliability": {
+    "video": 1.0,
+    "resume": 0.8,
+    "linkedin": 0.7,
+    "review": 0.6,
+    "github": 0.9
+  }
+}
