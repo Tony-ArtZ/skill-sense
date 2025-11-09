@@ -1,0 +1,52 @@
+Presenter: "We're launching 'Project Chimera,' a critical initiative. The requirements are demanding, needing not just specific technical skills but also abstract qualities that are hard
+  to find on a resume. Let's see if our agent can build the perfect team."
+
+  Action 1: Ingest All Unstructured Data
+
+   1 You: ingest_url project_chimera_brief.txt
+   2 You: upload alice_resume.docx
+   3 You: upload bob_performance_review.pdf
+   4 You: upload carlos_peer_reviews.json
+  Presenter: "The agent has now consumed the project brief, a resume, a performance review, and even 360-degree peer feedback. It has a complete picture of our data landscape."
+
+  ---
+
+  Action 2: The Strategic "Who" Question
+
+   1 You: Based on all available data, who is the best candidate to LEAD Project Chimera?
+  Showcase Moment: This is the first "wow." The agent will perform a massive hybrid query.
+   * It will use RAG on the brief to identify the need for "low-latency API design" and "grace under pressure."
+   * It will use RAG on Alice's resume and infer that her "Trading API" project matches these abstract requirements.
+   * It will use RAG on Bob's review and see his technical strength but also the subtle red flag about his documentation.
+   * It will use RAG on Carlos's peer reviews to see his mentorship skills.
+   * It will then synthesize all of this into a nuanced recommendation: "Alice is the strongest candidate for the lead role, as her resume demonstrates experience with high-stakes,
+     low-latency projects. Carlos shows strong mentorship qualities, making him a potential tech lead."
+
+  ---
+
+  Action 3: The "Skill Gap" Analysis
+  Presenter: "Alice is a great fit for the lead. Now, what skills is she missing for this project?"
+
+   1 You: What are the skill gaps between Alice's resume and the Project Chimera brief?
+  Showcase Moment: The agent will perform a comparative RAG query. It will look at the skills mentioned in the brief and cross-reference them with the skills found in her resume, identifying
+  any missing pieces. This shows the agent can not only find information but also perform a gap analysis between two documents.
+
+  ---
+
+  Action 4: The "Team Cohesion" Query
+  Presenter: "Building a team isn't just about skills; it's about how people work together. Let's build the rest of the team around Alice."
+
+   1 You: Find two other engineers who have successfully worked with Alice in the past and possess skills in 'algorithmic optimization' or 'React'.
+  Showcase Moment: This query forces the agent to use the SQL tool to query the new project_members table to find past collaborators, and then join that with the skills table to match the
+  technical requirements. This demonstrates its ability to reason about relationships and team dynamics.
+
+  ---
+
+  Action 5: The Final Recommendation
+  Presenter: "We have our candidates. Now for the final recommendation."
+
+   1 You: Generate a final team proposal for Project Chimera with Alice as the lead, and provide a justification for each member's inclusion based on all available data.
+  Showcase Moment: This is the grand finale. The agent will synthesize everything it has learned from the previous queries—the project needs, the candidates' strengths and weaknesses from
+  their documents, and their past collaborations from the database—to generate a comprehensive, well-reasoned proposal for the entire team.
+
+  This script tells a much more profound story: the AI is not just a data retriever; it's a strategic talent advisor.
