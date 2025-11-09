@@ -34,7 +34,49 @@ export default function IngestionPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [employeeName, setEmployeeName] = useState("");
+  const [projectRequirements, setProjectRequirements] = useState("");
+  const [projectTitle, setProjectTitle] = useState("");
   const [status, setStatus] = useState<UploadStatus | null>(null);
+
+  const handleProjectRequirements = async () => {
+    if (!projectRequirements) return;
+
+    setStatus({
+      type: "loading",
+      message: "Processing project requirements...",
+    });
+
+    try {
+      const response = await fetch("http://localhost:8001/requirements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: projectTitle || "Project Requirements",
+          text: projectRequirements,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setStatus({
+          type: "success",
+          message: `Project requirements indexed! Extracted ${
+            data.data.extracted_skills?.length || 0
+          } required skills.`,
+        });
+        setTimeout(() => setStatus(null), 4000);
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      setStatus({
+        type: "error",
+        message:
+          "Failed to process requirements. Make sure the API server is running on port 8001.",
+      });
+    }
+  };
 
   const handleResumeUpload = async () => {
     if (!resumeFile && !resumeText) return;
@@ -57,9 +99,11 @@ export default function IngestionPage() {
       if (data.success) {
         setStatus({
           type: "success",
-          message: "Resume uploaded successfully!",
+          message: `${data.message} Extracted ${
+            data.data.extracted_skills?.length || 0
+          } skills with evidence.`,
         });
-        setTimeout(() => setStatus(null), 3000);
+        setTimeout(() => setStatus(null), 4000);
       } else {
         throw new Error("Upload failed");
       }
@@ -147,6 +191,75 @@ export default function IngestionPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Project Requirements Input */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Card className="border-2 border-primary/40 shadow-xl shadow-primary/20 bg-card/95 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3 text-foreground text-lg">
+              <div className="w-10 h-10 bg-linear-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-md shadow-purple-500/20">
+                <FileText className="w-5 h-5 text-white" />
+              </div>
+              Project Requirements
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Define project requirements or upload a brief • AI extracts
+              required skills for intelligent candidate matching
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-xs font-mono text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider">
+                <span className="text-primary">›</span>Project Name
+              </label>
+              <div className="flex items-center gap-2 bg-background border border-border rounded-sm px-3 py-2 focus-within:border-primary transition-colors">
+                <span className="text-primary font-mono text-sm">$</span>
+                <Input
+                  placeholder="Project Phoenix"
+                  value={projectTitle}
+                  onChange={(e) => setProjectTitle(e.target.value)}
+                  className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 font-mono text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-mono text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider">
+                <span className="text-primary">›</span>Requirements
+              </label>
+              <Textarea
+                placeholder="Describe the project requirements and needed skills:
+
+Required Skills:
+- Python and FastAPI (5+ years experience)
+- Leadership experience managing engineering teams
+- High-traffic API systems (10k+ requests/second)
+- API design and optimization
+- Database experience (PostgreSQL preferred)
+
+Role: Technical Lead / Project Lead
+Timeline: 6 months"
+                value={projectRequirements}
+                onChange={(e) => setProjectRequirements(e.target.value)}
+                rows={10}
+                className="bg-background border-border focus:border-primary font-mono text-xs leading-relaxed"
+              />
+            </div>
+
+            <Button
+              onClick={handleProjectRequirements}
+              className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-600/90 hover:to-pink-600/90 shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 text-white font-semibold"
+              disabled={!projectRequirements}
+            >
+              <Upload className="mr-2 h-5 w-5" />
+              Index Requirements
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Info Card */}
       <motion.div

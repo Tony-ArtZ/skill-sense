@@ -27,6 +27,8 @@ interface QueryResult {
   answer: string;
   sql_query?: string;
   results?: any[];
+  query_type?: string;
+  processing_time_ms?: number;
   error?: string;
 }
 
@@ -36,11 +38,11 @@ export default function QueryDashboard() {
   const [result, setResult] = useState<QueryResult | null>(null);
 
   const exampleQueries = [
-    "Who is the best candidate to lead Project Chimera?",
-    "Find engineers with algorithmic optimization and React skills",
-    "What are Alice's skill gaps for the project brief?",
-    "Show me top 3 Docker experts with leadership experience",
-    "Generate a team proposal for AI project requirements",
+    "Who are the best candidates to lead Project Phoenix?",
+    "Does Alice's resume show experience with Python and leadership?",
+    "Compare Alice's skills from her resume with Bob's skills from his performance review",
+    "Show me all engineers with less than 2 years of experience who know React",
+    "Generate a final team proposal for Project Phoenix with justifications",
   ];
 
   const handleQuery = async (queryText: string) => {
@@ -133,7 +135,7 @@ export default function QueryDashboard() {
             <div className="mt-6">
               <p className="text-sm text-muted-foreground mb-3 flex items-center gap-2 font-semibold">
                 <Sparkles className="w-4 h-4 text-primary" />
-                Try these examples:
+                Example queries:
               </p>
               <div className="flex flex-wrap gap-2">
                 {exampleQueries.map((example, idx) => (
@@ -165,24 +167,59 @@ export default function QueryDashboard() {
         >
           {result.success ? (
             <>
+              {/* Query Metadata */}
+              <Card className="border border-primary/20 bg-card/50 shadow-sm">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-4 text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">query_type:</span>
+                      <Badge
+                        variant="outline"
+                        className={`font-mono ${
+                          result.query_type === "HYBRID" ||
+                          result.query_type === "ADVANCED_HYBRID"
+                            ? "border-purple-500/50 text-purple-400"
+                            : result.query_type === "RAG"
+                            ? "border-blue-500/50 text-blue-400"
+                            : "border-green-500/50 text-green-400"
+                        }`}
+                      >
+                        {result.query_type || "HYBRID"}
+                      </Badge>
+                    </div>
+                    {result.processing_time_ms && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">
+                          processing_time:
+                        </span>
+                        <span className="text-primary">
+                          {result.processing_time_ms}ms
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Answer Summary */}
               <Card className="border border-primary/30 bg-card shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground font-mono text-sm">
                     <span className="text-primary">$</span>
-                    output --format=json
+                    response --evidence-backed
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="p-4 bg-background rounded-sm border border-border">
-                    <p className="text-foreground leading-relaxed font-mono text-sm">
+                    <div className="text-foreground leading-relaxed text-sm whitespace-pre-wrap">
                       {result.answer}
-                    </p>
+                    </div>
                   </div>
                   {result.sql_query && (
                     <details className="group">
                       <summary className="text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-2 font-mono uppercase tracking-wider">
-                        <span className="text-primary">›</span> generated_sql
+                        <span className="text-primary">›</span>{" "}
+                        generated_sql_query
                       </summary>
                       <pre className="mt-2 p-4 bg-background border border-border text-primary/80 rounded-sm text-xs overflow-x-auto font-mono">
                         {result.sql_query}
