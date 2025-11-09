@@ -26,15 +26,19 @@ except ImportError:
     DOCX_AVAILABLE = False
 
 class RAGManager:
-    def __init__(self, dimension=1024):
-        self.dimension = dimension
+    def __init__(self, dimension=None):
         self.db_manager = DatabaseManager("data/talent_database.db")
         self.llm_manager = LLMManager()
+        self.documents = []
+        self.embeddings = []
 
         try:
+            # Attempt to initialize the primary (OpenRouter) embedder
             class OpenRouterEmbedder:
                 def __init__(self):
                     self.api_key = os.getenv('OPENROUTER_API_KEY')
+                    if not self.api_key:
+                        raise ValueError("OPENROUTER_API_KEY not found in environment variables.")
                     self.base_url = "https://openrouter.ai/api/v1"
                     self.model = "qwen/qwen3-embedding-0.6b"
                     self.async_client = httpx.AsyncClient(timeout=30.0)
@@ -45,34 +49,45 @@ class RAGManager:
 
                     headers = {
                         "Authorization": f"Bearer {self.api_key}",
-                        "HTTP-Referer": "https://openrouter.ai",
+                        "HTTP-Referer": "https://skillsense.dev", # Recommended by OpenRouter
                         "Content-Type": "application/json"
                     }
                     data = {"model": self.model, "input": texts, "encoding_format": "float"}
 
-                    response = await self.async_client.post(f"{self.base_url}/embeddings", headers=headers, json=data)
-                    response.raise_for_status()
+                    try:
+                        response = await self.async_client.post(f"{self.base_url}/embeddings", headers=headers, json=data)
+                        response.raise_for_status()
 
-                    result = response.json()
-                    if "data" in result and len(result["data"]) > 0:
-                        embeddings = [item["embedding"] for item in result["data"]]
-                        if convert_to_numpy:
-                            return np.array(embeddings, dtype='float32')
-                        return embeddings
-                    else:
-                        raise Exception("No embedding data in response")
+                        result = response.json()
+                        if "data" in result and len(result["data"]) > 0:
+                            embeddings = [item["embedding"] for item in result["data"]]
+                            if convert_to_numpy:
+                                return np.array(embeddings, dtype='float32')
+                            return embeddings
+                        else:
+                            raise Exception("No embedding data in OpenRouter response")
+                    except Exception as e:
+                        # Add logging to see the actual error from the API
+                        print(f"❌ OpenRouter embedding failed: {e}")
+                        # Return None or an empty array to be handled by the caller
+                        return np.array([], dtype='float32')
 
             self.embedder = OpenRouterEmbedder()
-            print("✅ Using OpenRouter embeddings (async)")
-        except Exception as e:
-            print(f"Falling back to local embeddings: {str(e)}")
-            self.embedder = SentenceTransformer('all-mpnet-base-v2')
-            self.dimension = 768
-            print("✅ Using local sentence transformer embeddings")
+            self.dimension = 1024  # Dimension for the OpenRouter model
+            print("✅ Using OpenRouter embeddings (async, dim=1024)")
 
+        except Exception as e:
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(f"⚠️ WARNING: Failed to initialize OpenRouter embedder: {e}")
+            print("⚠️ Falling back to local sentence-transformer model.")
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            self.embedder = SentenceTransformer('all-mpnet-base-v2')
+            self.dimension = 768 # Dimension for the local model
+            print("✅ Using local sentence transformer embeddings (sync, dim=768)")
+
+        # Initialize the FAISS index and embeddings array AFTER the dimension has been set
         self.index = faiss.IndexFlatL2(self.dimension)
-        self.documents = []
-        self.embeddings = []
+        self.embeddings = np.array([], dtype=np.float32).reshape(0, self.dimension)
         self._load_index()
 
     def _load_index(self):
@@ -209,7 +224,30 @@ class RAGManager:
             return "No relevant information found in the documents."
         
         context = "\n\n".join([f"Document {i+1} (Employee {chunk['employee_id']}): {chunk['chunk_text']}" for i, chunk in enumerate(context_chunks[:3])])
-        prompt = f"You are a talent analytics expert... Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+        prompt = f"""You are a helpful AI assistant. Your task is to answer the user's question based *only* on the provided context. Do not use any external knowledge or tools.
+
+---
+**Example:**
+
+Context:
+Document 1: Alice Johnson is a Senior Software Engineer. She led a project to redesign the e-commerce checkout flow, which resulted in a 40% increase in conversion rates. She is proficient in Python and Django.
+
+User Question:
+What is Alice's experience with Python?
+
+Answer:
+Based on the documents, Alice Johnson is proficient in Python. She used it on a project to redesign an e-commerce checkout flow.
+---
+
+**Task:**
+
+Context:
+{context}
+
+User Question:
+{query}
+
+Answer:"""
         
         print("[RAG_TRACE] Invoking LLM to generate final answer...")
         llm = self.llm_manager.get_llm("default")

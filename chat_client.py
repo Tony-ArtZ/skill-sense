@@ -101,6 +101,7 @@ def main():
     print()
     print("📤 Commands:")
     print("  upload <file_path>     - Upload document for RAG search")
+    print("  ingest_url <url>       - Scrape and ingest a URL for RAG search")
     print("  stats                  - Show system statistics")
     print("  examples               - Show more sample queries")
     print("  help                   - Show this help")
@@ -131,6 +132,7 @@ def main():
             if query.lower() == "help":
                 print("\n📖 Available Commands:")
                 print("  📤 upload <file_path>     - Upload document for RAG search")
+                print("  🕸️ ingest_url <url>       - Scrape and ingest a URL")
                 print("  📊 stats                  - Show system statistics")
                 print("  📝 examples               - Show sample queries")
                 print("  ❓ help                   - Show this help")
@@ -143,6 +145,27 @@ def main():
             if query.lower().startswith("upload "):
                 file_path = query[7:].strip()
                 upload_document(file_path)
+                print()
+                continue
+
+            # Check for ingest_url command
+            if query.lower().startswith("ingest_url "):
+                url = query[11:].strip()
+                try:
+                    print(f"🕸️ Ingesting URL: {url}")
+                    payload = {"url": url, "employee_id": 1} # Hardcoding employee_id=1 for client simplicity
+                    response = requests.post(
+                        "http://localhost:8001/ingest-url",
+                        headers={"Content-Type": "application/json"},
+                        data=json.dumps(payload),
+                        timeout=120
+                    )
+                    if response.status_code == 200:
+                        print(f"✅ URL ingested successfully: {response.json()}")
+                    else:
+                        print(f"❌ URL ingestion failed: {response.text}")
+                except Exception as e:
+                    print(f"❌ Error during URL ingestion: {e}")
                 print()
                 continue
 

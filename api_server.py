@@ -4,7 +4,7 @@ FastAPI server for SkillSense Platform.
 Provides REST API endpoints for talent analytics.
 """
 
-from fastapi import FastAPI, File, UploadFile, Form,Request, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -19,6 +19,7 @@ from managers.database_manager import DatabaseManager
 from managers.llm_manager import LLMManager
 from managers.ontology_manager import OntologyManager
 from managers.prompt_manager import PromptManager
+from managers.web_scraper import WebScraperManager
 from simple_nl_to_sql import SimpleNLToSQL
 from rag_manager import RAGManager
 from agentic_query_processor import AgenticQueryProcessor
@@ -31,9 +32,10 @@ async def lifespan(app: FastAPI):
     app.state.llm_manager = LLMManager()
     app.state.ontology_manager = OntologyManager("config/skills_ontology.json")
     app.state.prompt_manager = PromptManager()
+    app.state.web_scraper = WebScraperManager()
     app.state.rag_manager = RAGManager()
     app.state.simple_nl_to_sql = SimpleNLToSQL(db_manager=app.state.db_manager, llm_manager=app.state.llm_manager)
-    app.state.agentic_processor = AgenticQueryProcessor(rag_manager=app.state.rag_manager, llm_manager=app.state.llm_manager, nl_to_sql_processor=app.state.simple_nl_to_sql)
+    app.state.agentic_processor = AgenticQueryProcessor(rag_manager=app.state.rag_manager, llm_manager=app.state.llm_manager, nl_to_sql_processor=app.state.simple_nl_to_sql, ontology_manager=app.state.ontology_manager)
     print("✅ All managers initialized successfully!")
     yield
     print("👋 Shutting down SkillSense API Server...")
@@ -66,8 +68,13 @@ class QueryResponse(BaseModel):
     sql_query: Optional[str] = None
     results: Optional[List[Dict]] = None
     rag_sources: Optional[List[Dict]] = None
-    query_type: Optional[str] = None # Added query_type
+    query_type: Optional[str] = None
     error: Optional[str] = None
+
+class IngestURLRequest(BaseModel):
+    url: str
+    employee_id: int
+    document_type: str = "web_source"
 
 @app.get("/")
 async def root():
@@ -116,105 +123,10 @@ async def natural_language_query(req: Request, query_request: QueryRequest):
             error=f"Query processing failed: {str(e)}"
         )
 
-@app.get("/employees")
-async def get_employees(request: Request):
-    """Get all employees."""
-    try:
-        query = "SELECT id, name, email, department, role, join_date FROM employees ORDER BY name"
-        results = request.app.state.db_manager.execute_query(query)
-        return {"success": True, "data": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/employees/{employee_id}")
-async def get_employee(request: Request, employee_id: int):
-    """Get a specific employee."""
-    try:
-        query = "SELECT * FROM employees WHERE id = ?"
-        results = request.app.state.db_manager.execute_query(query, (employee_id,))
-        if not results:
-            raise HTTPException(status_code=404, detail="Employee not found")
-        return {"success": True, "data": results[0]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/employees/{employee_id}/skills")
-async def get_employee_skills(request: Request, employee_id: int):
-    """Get skills for a specific employee."""
-    try:
-        query = """
-        SELECT s.skill_name, s.category, es.confidence, es.source_type,
-               es.evidence, es.is_implicit, es.video_timestamp
-        FROM employee_skills es
-        JOIN skills s ON es.skill_id = s.id
-        WHERE es.employee_id = ?
-        ORDER BY es.confidence DESC
-        """
-        results = request.app.state.db_manager.execute_query(query, (employee_id,))
-        return {"success": True, "data": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/skills")
-async def get_skills(request: Request):
-    """Get all skills."""
-    try:
-        query = "SELECT * FROM skills ORDER BY category, skill_name"
-        results = request.app.state.db_manager.execute_query(query)
-        return {"success": True, "data": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/departments")
-async def get_departments(request: Request):
-    """Get all departments."""
-    try:
-        query = "SELECT * FROM departments ORDER BY name"
-        results = request.app.state.db_manager.execute_query(query)
-        return {"success": True, "data": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/analytics/skills-distribution")
-async def get_skills_distribution(request: Request):
-    """Get skills distribution analytics."""
-    try:
-        query = """
-        SELECT s.category, COUNT(*) as skill_count,
-               AVG(es.confidence) as avg_confidence
-        FROM employee_skills es
-        JOIN skills s ON es.skill_id = s.id
-        GROUP BY s.category
-        ORDER BY skill_count DESC
-        """
-        results = request.app.state.db_manager.execute_query(query)
-        return {"success": True, "data": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/analytics/department-skills")
-async def get_department_skills(request: Request):
-    """Get skills analysis by department."""
-    try:
-        query = """
-        SELECT e.department, s.category, COUNT(*) as count,
-               AVG(es.confidence) as avg_confidence
-        FROM employee_skills es
-        JOIN employees e ON es.employee_id = e.id
-        JOIN skills s ON es.skill_id = s.id
-        GROUP BY e.department, s.category
-        ORDER BY e.department, count DESC
-        """
-        results = request.app.state.db_manager.execute_query(query)
-        return {"success": True, "data": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/upload/document")
 async def upload_document(employee_id: int = Form(...), file: UploadFile = File(...)):
     """Endpoint to upload a document for an employee."""
     try:
-        # Save the uploaded file temporarily
         temp_dir = "uploads"
         os.makedirs(temp_dir, exist_ok=True)
         file_path = os.path.join(temp_dir, file.filename)
@@ -222,7 +134,6 @@ async def upload_document(employee_id: int = Form(...), file: UploadFile = File(
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
 
-        # Process the document using the unified RAG manager method
         result = await app.state.rag_manager.add_document(file_path, employee_id)
         
         if result.get("success"):
@@ -232,6 +143,44 @@ async def upload_document(employee_id: int = Form(...), file: UploadFile = File(
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"An unexpected error occurred: {str(e)}"})
+
+@app.post("/ingest-url")
+async def ingest_url(request: IngestURLRequest, req: Request):
+    """Endpoint to scrape a URL and ingest its content into the RAG system."""
+    try:
+        scraped_text = await req.app.state.web_scraper.scrape_url(request.url)
+        if not scraped_text:
+            raise HTTPException(status_code=400, detail="Could not scrape any content from the URL.")
+
+        # --- DEBUGGING STEP: Save scraped content to a file ---
+        with open("scraped_content.txt", "w", encoding="utf-8") as f:
+            f.write(scraped_text)
+        print("📝 DEBUG: Scraped content saved to scraped_content.txt")
+        # --- END DEBUGGING STEP ---
+
+        # Create a temporary file to hold the scraped content
+
+        temp_dir = "uploads"
+        os.makedirs(temp_dir, exist_ok=True)
+        sanitized_filename = "".join(c for c in request.url if c.isalnum())[-50:] + ".txt"
+        file_path = os.path.join(temp_dir, sanitized_filename)
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(scraped_text)
+
+        result = await req.app.state.rag_manager.add_document(
+            file_path=file_path,
+            employee_id=request.employee_id,
+            document_type=request.document_type
+        )
+        
+        if result.get("success"):
+            return JSONResponse(status_code=200, content=result)
+        else:
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to process scraped content"))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
 @app.get("/rag/stats")
 async def get_rag_stats(request: Request):

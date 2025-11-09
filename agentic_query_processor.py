@@ -8,16 +8,21 @@ import json
 import asyncio
 import traceback
 from typing import Dict, List, Any
-from simple_nl_to_sql import SimpleNLToSQL
-from rag_manager import RAGManager
 from managers.llm_manager import LLMManager
+from managers.ontology_manager import OntologyManager
+from managers.ontology_tool import OntologyTool
+from rag_manager import RAGManager
+from simple_nl_to_sql import SimpleNLToSQL
 
 class AgenticQueryProcessor:
-    def __init__(self, rag_manager: RAGManager, llm_manager: LLMManager, nl_to_sql_processor: SimpleNLToSQL):
+    def __init__(self, rag_manager: RAGManager, llm_manager: LLMManager, nl_to_sql_processor: SimpleNLToSQL, ontology_manager: OntologyManager):
         self.rag_manager = rag_manager
         self.llm_manager = llm_manager
         self.nl_to_sql = nl_to_sql_processor
-        self.planner_llm = llm_manager.get_llm("planner")
+        self.planner_llm = llm_manager.get_llm("planning")
+        ontology_text = ontology_manager.get_ontology_text()
+        self.ontology_data = json.loads(ontology_text)
+        self.ontology_tool = OntologyTool(self.ontology_data)
 
     async def process_query(self, question: str) -> Dict[str, Any]:
         """
@@ -38,6 +43,28 @@ class AgenticQueryProcessor:
                     "query_type": "conversational", "sql_query": None, "results": [], "rag_sources": [],
                     "result_count": 0, "components": {}
                 }
+            
+            # Handle ontology tool plan
+            elif plan.get("tools_to_use") == ["ontology_tool"]:
+                print("📚 Handling ontology query.")
+                # This is a simplified example. A more advanced agent would extract args from the question.
+                # For now, we'll just return an overview or try to guess the intent.
+                if "category" in question.lower() and "python" in question.lower():
+                    category = self.ontology_tool.get_skill_category("Python")
+                    answer = f"Python is in the '{category}' category." if category else "Could not find category for Python."
+                elif "categories" in question.lower() or "overview" in question.lower():
+                    answer = self.ontology_tool.get_ontology_overview()
+                elif "related" in question.lower():
+                    # This would require more sophisticated NLP to extract the skill name
+                    answer = "To find related skills, please specify the skill name clearly."
+                else:
+                    answer = "I can query the skill ontology. Please ask about skill categories, related skills, or for an overview."
+                
+                return {
+                    "success": True, "question": question, "answer": answer,
+                    "query_type": "ontology", "sql_query": None, "results": [], "rag_sources": [],
+                    "result_count": 0, "components": {}
+                }
 
             tasks = []
             if "sql_tool" in plan["tools_to_use"]:
@@ -56,7 +83,7 @@ class AgenticQueryProcessor:
                     print("✅ All tools executed.")
                 except asyncio.TimeoutError:
                     print("❌ Tool execution timed out on the server.")
-                    return {"success": False, "question": question, "error": "Agent tool execution timed out after 290 seconds.", "query_type": "error", "answer": "Sorry, the request took too long to process.", "result_count": 0}
+                    return {"success": False, "question": question, "error": "Agent tool execution timed out after 300 seconds.", "query_type": "error", "answer": "Sorry, the request took too long to process.", "result_count": 0}
                 
                 # Unpack results based on the plan
                 if "sql_tool" in plan["tools_to_use"]:
@@ -64,8 +91,8 @@ class AgenticQueryProcessor:
                 if "rag_tool" in plan["tools_to_use"]:
                     rag_result = results.pop(0)
             
-            sql_result = sql_result or {"success": False, "answer": "", "results": [], "sql_query": None}
-            rag_result = rag_result or {"success": False, "answer": "", "sources": []}
+            sql_result = sql_result or {"success": False, "answer": "", "results": [], "sql_query": None, "summary": "SQL tool not used."}
+            rag_result = rag_result or {"success": False, "answer": "RAG tool not used.", "sources": []}
 
             combined_answer = await self._combine_results(question, sql_result, rag_result)
             
@@ -85,19 +112,22 @@ class AgenticQueryProcessor:
             return {"success": False, "question": question, "error": str(e), "query_type": "error", "answer": "Sorry, I encountered an error processing your question.", "result_count": 0}
 
     async def _generate_plan(self, question: str) -> Dict[str, Any]:
-        # ... (This method is now async but its internal logic is the same)
         tool_descriptions = {
             "sql_tool": {
                 "description": "Searches and retrieves structured data about employees, their skills, departments, and roles from a database. Use for questions about who, what, where, how many.",
                 "example_questions": ["How many Python developers do we have?", "List all employees in the Engineering department."]
             },
             "rag_tool": {
-                "description": "Searches the content of unstructured documents (like resumes, project descriptions, performance reviews) to find qualitative information, examples, and experiences. Use for questions about 'what does X say about Y' or 'show me examples of Z'.",
-                "example_questions": ["What leadership experience does Alice have?", "Show me examples of projects where Bob used Java."]
+                "description": "Searches internal documents (resumes, articles, reviews) to answer questions about specific topics, people, or experiences. Use this for any question that asks 'what', 'how', or 'explain' about a topic that might be in the knowledge base.",
+                "example_questions": ["What is Alice's leadership experience?", "Explain the concept of LLM agents based on the documents.", "what were the main findings in the paper?"]
             },
             "conversational_tool": {
-                "description": "Responds to simple greetings, small talk, or conversational questions where no data is required.",
-                "example_questions": ["hello", "hi", "how are you?", "thanks"]
+                "description": "Responds ONLY to simple greetings and social niceties like 'hello', 'hi', or 'thanks'. Do NOT use this for any question that asks for information.",
+                "example_questions": ["hello", "hi", "how are you?", "thanks", "good morning"]
+            },
+            "ontology_tool": {
+                "description": "Used to query the skills ontology for skill categories, related skills, or to get an overview of the skill framework. Use for questions about skill relationships, categories, or the structure of skills.",
+                "example_questions": ["What category is 'Python' in?", "Show me skills related to 'Project Management'.", "What are the main skill categories?"]
             }
         }
         prompt = f"""You are an intelligent agent designed to select the best tool(s) to answer a user's question.
@@ -108,13 +138,14 @@ You have access to the following tools:
 Based on the user's question, your task is to output a JSON object indicating the tools to use.
 The JSON object must have a key named "tools_to_use".
 The value for "tools_to_use" must be a list of strings.
-The strings in the list must be one of: "sql_tool", "rag_tool", "conversational_tool".
+The strings in the list must be one of: "sql_tool", "rag_tool", "conversational_tool", "ontology_tool".
 
 Examples:
-- For a question like "List all engineers", you would output: {{\"tools_to_use\": [\"sql_tool\"]}}
-- For a question like "What does the resume say?", you would output: {{\"tools_to_use\": [\"rag_tool\"]}}
-- For a question like "hello", you would output: {{\"tools_to_use\": [\"conversational_tool\"]}}
-- For a question like "Compare skills with resume", you would output: {{\"tools_to_use\": [\"sql_tool\", \"rag_tool\"]}}
+- For a question like "List all engineers", you would output: {{'tools_to_use': ['sql_tool']}}
+- For a question like "What does the resume say?", you would output: {{'tools_to_use': ['rag_tool']}}
+- For a question like "hello", you would output: {{'tools_to_use': ['conversational_tool']}}
+- For a question like "What category is 'Python' in?", you would output: {{'tools_to_use': ['ontology_tool']}}
+- For a question like "Compare skills with resume", you would output: {{'tools_to_use': ['sql_tool', 'rag_tool']}}
 
 Do not add any explanation or reasoning. Output only the JSON object.
 
