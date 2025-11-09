@@ -4,7 +4,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from managers import LLMManager, PromptManager
-from tools import inspect_database_schema, run_textql_workflow
+from multimodal.tools import inspect_database_schema, run_textql_workflow
 
 
 # The state definition without memory
