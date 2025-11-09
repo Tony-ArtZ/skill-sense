@@ -1,0 +1,41 @@
+ALICE JOHNSON
+Senior Software Engineer
+alice.johnson@email.com | (555) 123-4567 | LinkedIn: linkedin.com/in/alicejohnson
+
+PROFESSIONAL SUMMARY
+Experienced Senior Software Engineer with 5 years of expertise in Python, Django, and cloud technologies.
+Proven track record of leading cross-functional teams and delivering scalable solutions.
+Strong background in machine learning and data analytics.
+
+TECHNICAL SKILLS
+- Programming Languages: Python (Expert), JavaScript, Java, SQL
+- Frameworks: Django, Flask, React, Node.js
+- Cloud Platforms: AWS, Google Cloud, Azure
+- Databases: PostgreSQL, MongoDB, Redis
+- Machine Learning: TensorFlow, PyTorch, Scikit-learn
+- DevOps: Docker, Kubernetes, CI/CD, Jenkins
+
+LEADERSHIP EXPERIENCE
+Led a team of 5 developers in redesigning the company's e-commerce platform, resulting in
+40% increase in performance and 25% reduction in server costs. Mentored junior developers
+and conducted code reviews to ensure quality standards.
+
+PROJECTS
+- E-commerce Platform Redesign (2022-2023)
+  * Architected microservices-based system using Django and Docker
+  * Implemented real-time inventory management with Redis
+  * Reduced page load time by 60% through optimization
+
+- Machine Learning Pipeline (2021-2022)
+  * Developed predictive analytics model for customer behavior
+  * Used TensorFlow and Python for data processing
+  * Improved recommendation accuracy by 35%
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Technology (2016-2020)
+GPA: 3.8/4.0
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect (2021)
+- Google Cloud Professional Developer (2022)

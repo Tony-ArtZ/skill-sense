@@ -16,22 +16,25 @@ class LLMManager:
         self.llm = ChatOpenAI(
             api_key=openrouter_key,
             base_url='https://openrouter.ai/api/v1',
-            model="anthropic/claude-3.5-haiku",
-            temperature=0
+            model="x-ai/grok-4-fast",
+            temperature=0,
+            request_timeout=80
         )           # Default LLM for most tasks
 
         self.planner_llm = ChatOpenAI(
             api_key=openrouter_key,
             base_url='https://openrouter.ai/api/v1',
-            model="x-ai/grok-4-fast:free",
-            temperature=0
+            model="x-ai/grok-4-fast",
+            temperature=0,
+            request_timeout=80
         )       # Specialized for planning
 
         self.reflector_llm = ChatOpenAI(
             api_key=openrouter_key,
             base_url='https://openrouter.ai/api/v1',
-            model="anthropic/claude-3.5-haiku",
-            temperature=0
+            model="x-ai/grok-4-fast",
+            temperature=0,
+            request_timeout=80
         )   # Specialized for reflection/validation
 
     def get_llm(self, task_type="default"):

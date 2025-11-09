@@ -1,0 +1,94 @@
+
+--- Page 1 ---
+Hack-Nation's
+
+GLOBAL Al HACKATHON
+
+in collaboration with MIT Sloan Al Club
+
+SkillSense — Unlock Your Hidden Potential
+Track: Corporate Track (SAP Challenge)
+
+1. Motivation / Goal to Achieve
+
+The future of work is rapidly shifting from credentials-based hiring to skills-based talent
+management. Yet, individuals often possess a wealth of capabilities that remain undocumented
+underutilized, or are maybe even unknown. SkillSense aims to revolutionize how we discover
+and validate these hidden skills by leveraging Al to build dynamic, multi-source skill profiles
+
+Traditional resumes capture only a fraction of what people truly know. Skills acquired through
+projects, mentorship, and informal learning often go unnoticed. This leads to missed
+opportunities for individuals and friction in talent matching for employers. SkillSense addresses
+this by creating intelligent systems that uncover hidden expertise and provide actionable
+insights for career development and organizational operations.
+
+Or in simple words, SkillSense tries to answer: What am | good at?
+2. Core Features (MVP)
+
+Participants are expected to build at least one Al-powered application that identifies skills
+for a specific person by:
+
+e Aggregating data from multiple sources (e.g., CVs, LinkedIn, GitHub, blogs, or
+publications) but also internal company documents such as goals, performance reviews,
+and reference letters
+
+e Extracting both explicit and implicit skills using NLP and semantic analysis
+
+e Generating structured, dynamic skill profiles per person with confidence scores and
+evidence trails
+
+e Summarizing and editing of identified skills per person to remove hallucinations
+
+Based on these skill profiles a bunch of new use cases are possible:
+
+--- Page 2 ---
+Enables interactive exploration, skill gap analysis, and personalized learning
+recommendations
+
+Create a new or enhance existing CVs with this skill analysis
+
+Match individuals to opportunities (identify skills from job postings) or assemble
+complementary teams
+
+Overview of a set of people to identify individual experts but also gaps in an entire
+organization
+
+3. Constraints & considerations
+
+Privacy considerations must be addressed: define what data is shared vs. private
+
+The challenge can start simple with one or two structured sources but gets complicated
+the more sources will be considered — so choose them wisely
+
+In best case, you will also include a formal skill framework that will allow some
+comparison and assessment of capabilities
+
+Use synthetic or publicly available data if real user data is not accessible but in best
+case you can use your own data and find hidden gems in your own skills
+
+4. Hints and Resources
+
+Data Sources
+
+Start with your own latest CV and extend this with your public profiles such as Linkedin,
+GitHub, Personal blogs and websites, Instagram etc.
+
+There are also plenty of data sets such as Kaggle resume datasets, Academic CV
+corpora, or start with simulating employee user profiles incl. their goals and performance
+reviews
+
+5. Why It Matters
+
+SkillSense will empower:
+
+Individuals to discover hidden strengths and strategically build their personal brand
+Teams to staff projects with the perfect skill mix in minutes
+
+Learning & Development to create personalized upskilling paths
+
+Organizations to identify internal experts and unlock hidden talent
+
+We're entering an era where skills are the new currency. Traditional hiring methods are no
+longer sufficient. SkillSense provides the infrastructure to support skills-based career navigation,
+helping students, professionals, and companies thrive in a dynamic job market. This challenge
+invites participants to build tools that unlock human potential—one skill at a time.

@@ -29,13 +29,28 @@ class DatabaseManager:
         """Get database schema information"""
         return self.schema
 
-    def execute_query(self, query: str) -> List[Dict]:
+    def execute_query(self, query: str, params: tuple = None) -> List[Dict]:
         """Execute SQL query and return results as list of dictionaries"""
         conn = sqlite3.connect(self.db_file)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute(query)
-        results = [dict(row) for row in cursor.fetchall()]
+
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+
+        # For read queries, fetch all results
+        if query.strip().upper().startswith('SELECT') or query.strip().upper().startswith('PRAGMA'):
+            results = [dict(row) for row in cursor.fetchall()]
+        else:
+            # For write queries, commit and potentially return lastrowid
+            conn.commit()
+            if query.strip().upper().startswith('INSERT'):
+                results = cursor.lastrowid
+            else:
+                results = []  # No results to return for UPDATE/DELETE
+
         conn.close()
         return results
 
